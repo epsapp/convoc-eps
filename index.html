@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Convocations EPS">
+<title>Convocations EPS</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f17;
+  --surface: #1a1a2e;
+  --surface2: #22223a;
+  --surface3: #2a2a45;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --text: #f0f0f5;
+  --text2: #9090aa;
+  --text3: #5a5a75;
+  --accent: #6c8aff;
+  --accent2: #4a6adf;
+  --accent-dim: rgba(108,138,255,0.15);
+  --green: #4ade80;
+  --green-dim: rgba(74,222,128,0.12);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251,191,36,0.12);
+  --red: #f87171;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;min-height:100vh}
+
+/* HEADER */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:56px;flex-shrink:0;position:sticky;top:0;z-index:100}
+.header-logo{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+.header h1{font-size:15px;font-weight:500;letter-spacing:-0.2px}
+.header-sub{font-size:12px;color:var(--text3);margin-left:auto}
+
+/* LAYOUT */
+.app{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.main{flex:1;overflow-y:auto;padding:1.5rem}
+
+/* STEPS NAV */
+.steps-nav{padding:1rem 0.75rem;display:flex;flex-direction:column;gap:2px}
+.steps-nav-title{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 0.5rem;margin-bottom:6px}
+.step-btn{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;border:none;background:none;color:var(--text2);font-family:var(--font);font-size:13px;text-align:left;width:100%;transition:all 0.15s}
+.step-btn:hover{background:var(--surface2);color:var(--text)}
+.step-btn.active{background:var(--accent-dim);color:var(--accent)}
+.step-num{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.step-btn.done .step-num{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.step-btn.done{color:var(--text2)}
+
+/* TYPE CARDS */
+.type-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem}
+.type-card{border:1.5px solid var(--border);border-radius:var(--radius);padding:1rem;cursor:pointer;transition:all 0.15s;background:var(--surface)}
+.type-card:hover{border-color:var(--border2);background:var(--surface2)}
+.type-card.sel{border-color:var(--accent);background:var(--accent-dim)}
+.type-card .tc-icon{font-size:24px;margin-bottom:8px}
+.type-card strong{display:block;font-size:13px;font-weight:500;margin-bottom:3px}
+.type-card span{font-size:11px;color:var(--text3)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:13px;font-weight:500;margin-bottom:1rem;color:var(--text2);display:flex;align-items:center;gap:6px}
+.card-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px}
+
+/* FORM */
+label{font-size:11px;color:var(--text3);display:block;margin-bottom:4px;margin-top:12px;text-transform:uppercase;letter-spacing:0.5px}
+label:first-child{margin-top:0}
+input[type=text],input[type=date],input[type=time],textarea,select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface2);color:var(--text);font-family:var(--font);outline:none;transition:border-color 0.15s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+select option{background:var(--surface2)}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* DROP ZONE */
+.drop-zone{border:1.5px dashed var(--border2);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;color:var(--text3);transition:all 0.15s}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--accent-dim);color:var(--text2)}
+.drop-zone .dz-icon{font-size:28px;margin-bottom:8px}
+.drop-zone strong{display:block;font-size:13px;color:var(--text);margin-bottom:4px}
+
+/* LOGO UPLOAD */
+.logo-upload{display:flex;align-items:center;gap:12px;margin-top:4px}
+.logo-preview{width:64px;height:64px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.logo-preview img{width:100%;height:100%;object-fit:contain}
+.logo-preview .lp-empty{font-size:10px;color:var(--text3);text-align:center}
+.logo-upload-btns{display:flex;flex-direction:column;gap:6px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-weight:500;background:var(--surface2);color:var(--text);font-family:var(--font);transition:all 0.15s;white-space:nowrap}
+.btn:hover{background:var(--surface3);border-color:var(--border2)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{background:var(--accent2)}
+.btn.danger{background:rgba(248,113,113,0.1);color:var(--red);border-color:rgba(248,113,113,0.3)}
+.btn.sm{padding:5px 10px;font-size:11px}
+.btn-row{display:flex;gap:8px;margin-top:1.25rem;flex-wrap:wrap}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;margin-top:10px;border-radius:var(--radius-sm);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--surface2);padding:7px 10px;text-align:left;font-weight:500;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* MAP ROWS */
+.map-row{display:grid;grid-template-columns:80px 20px 1fr;gap:8px;align-items:center;margin-bottom:6px}
+.map-label{font-size:12px;color:var(--text2)}
+.map-arrow{font-size:12px;color:var(--text3);text-align:center}
+select.sm-sel{font-size:12px;padding:5px 8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;font-family:var(--font)}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge.green{background:var(--green-dim);color:var(--green)}
+.badge.amber{background:var(--amber-dim);color:var(--amber)}
+.badge.blue{background:var(--accent-dim);color:var(--accent)}
+
+/* INFO */
+.info{padding:10px 12px;border-radius:var(--radius-sm);font-size:12px;display:flex;align-items:flex-start;gap:8px}
+.info.blue{background:var(--accent-dim);color:#a0b4ff}
+.info.green{background:var(--green-dim);color:var(--green)}
+.info.amber{background:var(--amber-dim);color:var(--amber)}
+
+/* PREVIEW */
+.preview-frame{background:#fff;color:#000;border-radius:var(--radius);padding:0;margin-top:1rem;overflow:hidden;border:1px solid var(--border)}
+.preview-frame iframe{width:100%;min-height:300px;border:none;display:block}
+
+/* APERCU LIVE */
+#apercu-zone{background:#fff;color:#000;padding:0;font-family:Arial,sans-serif;font-size:13px}
+
+/* OPTIONS CHECK */
+.opt-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.opt-row:last-child{border-bottom:none}
+.opt-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+.opt-row label{font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;margin:0}
+
+/* PROGRESS */
+.progress-wrap{background:var(--surface2);border-radius:20px;height:4px;overflow:hidden;margin-top:8px}
+.progress-bar{height:100%;background:var(--accent);border-radius:20px;transition:width 0.3s}
+
+/* SECTION TITLE */
+.section-title{font-size:18px;font-weight:500;margin-bottom:0.5rem;letter-spacing:-0.3px}
+.section-sub{font-size:13px;color:var(--text3);margin-bottom:1.5rem}
+
+/* MOBILE */
+@media(max-width:640px){
+  .sidebar{display:none}
+  .main{padding:1rem}
+  .type-cards{grid-template-columns:1fr 1fr}
+  .row2,.row3{grid-template-columns:1fr}
+}
+
+/* SAVE INDICATOR */
+.save-dot{width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:auto;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* TABS MOBILE */
+.mobile-tabs{display:none;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto}
+@media(max-width:640px){.mobile-tabs{display:flex}.sidebar{display:none}}
+.mob-tab{flex-shrink:0;padding:10px 14px;font-size:12px;border:none;background:none;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;font-family:var(--font)}
+.mob-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">C</div>
+  <h1>Convocations EPS</h1>
+  <div class="header-sub" id="save-status">
+    <span style="font-size:11px;color:var(--text3)" id="save-label">Paramètres sauvegardés</span>
+    <span class="save-dot" id="save-dot" style="display:none"></span>
+  </div>
+</div>
+
+<div class="mobile-tabs" id="mobile-tabs"></div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="steps-nav">
+      <div class="steps-nav-title">Étapes</div>
+      <button class="step-btn active" id="sb-1" onclick="goStep(1)">
+        <span class="step-num">1</span>Données
+      </button>
+      <button class="step-btn" id="sb-2" onclick="goStep(2)">
+        <span class="step-num">2</span>Modèle
+      </button>
+      <button class="step-btn" id="sb-3" onclick="goStep(3)">
+        <span class="step-num">3</span>Logos
+      </button>
+      <button class="step-btn" id="sb-4" onclick="goStep(4)">
+        <span class="step-num">4</span>Générer
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- STEP 1 : TYPE + DONNÉES -->
+    <div id="step-1">
+      <div class="section-title">Type et données</div>
+      <div class="section-sub">Choisissez le type de convocation et importez votre liste élèves</div>
+
+      <div class="card">
+        <div class="card-title">Type de convocation</div>
+        <div class="type-cards">
+          <div class="type-card sel" id="tc-unss" onclick="selectType('unss')">
+            <div class="tc-icon">🚵</div>
+            <strong>UNSS / Compétition</strong>
+            <span>Avec coupon parental</span>
+          </div>
+          <div class="type-card" id="tc-dnb" onclick="selectType('dnb')">
+            <div class="tc-icon">📋</div>
+            <strong>DNB EPS / Examen</strong>
+            <span>Convocation officielle</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Import élèves</div>
+        <div class="drop-zone" id="dropzone" onclick="document.getElementById('file-in').click()" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
+          <div class="dz-icon">📂</div>
+          <strong>Glisser un fichier ici</strong>
+          <span>Excel (.xlsx) ou CSV (.csv) — Colonnes : Nom, Prénom, Classe</span>
+        </div>
+        <input type="file" id="file-in" accept=".xlsx,.csv" style="display:none" onchange="loadFile(this)">
+
+        <div id="import-res" class="hidden">
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap" id="import-badges"></div>
+          <div class="tbl-wrap" id="tbl-wrap"></div>
+          <div style="margin-top:14px">
+            <div class="card-title" style="margin-bottom:8px">Associer les colonnes</div>
+            <div id="map-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" onclick="goStep(2)">Continuer →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2 : MODÈLE -->
+    <div id="step-2" class="hidden">
+      <div class="section-title">Paramètres du modèle</div>
+      <div class="section-sub">Ces paramètres sont sauvegardés automatiquement</div>
+
+      <!-- UNSS FORM -->
+      <div id="form-unss">
+        <div class="card">
+          <div class="card-title">Informations générales</div>
+          <label>Établissement</label>
+          <input type="text" id="u-etab" placeholder="Collège Jean Jaurès – Vieux-Condé">
+          <label>Sport / Activité</label>
+          <input type="text" id="u-sport" value="VTT">
+          <label>Intitulé complet de la compétition</label>
+          <input type="text" id="u-compet" value="championnat Départemental UNSS de VTT">
+        </div>
+        <div class="card">
+          <div class="card-title">Date, lieu et horaires</div>
+          <label>Date de la compétition</label>
+          <input type="date" id="u-date">
+          <label>Lieu et adresse</label>
+          <input type="text" id="u-lieu" placeholder="ex: Forêt de Mormal, Le Quesnoy">
+          <div class="row2">
+            <div>
+              <label>Heure de départ</label>
+              <input type="time" id="u-hdep" value="06:40">
+            </div>
+            <div>
+              <label>Lieu de départ</label>
+              <input type="text" id="u-ldep" value="devant le collège">
+            </div>
+          </div>
+          <div class="row2">
+            <div>
+              <label>Heure de retour</label>
+              <input type="time" id="u-hret" value="18:40">
+            </div>
+            <div>
+              <label>Lieu de retour</label>
+              <input type="text" id="u-lret" value="devant le complexe sportif">
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Informations complémentaires</div>
+          <label>Corps du message (libre)</label>
+          <textarea id="u-infos" rows="4">Le transport s'effectue en bus avec remorque pour transporter les vélos.
+Prévoir le repas du midi.
+Prévoir une tenue adaptée pour la compétition et une tenue propre pour le retour dans le bus.</textarea>
+        </div>
+      </div>
+
+      <!-- DNB FORM -->
+      <div id="form-dnb" class="hidden">
+        <div class="card">
+          <div class="card-title">Informations établissement</div>
+          <label>Nom du collège</label>
+          <input type="text" id="d-college" value="Collège Jean Jaurès – Vieux-Condé">
+        </div>
+        <div class="card">
+          <div class="card-title">Épreuve</div>
+          <label>Date de l'épreuve</label>
+          <input type="date" id="d-date">
+          <div class="row2">
+            <div>
+              <label>Heure de début</label>
+              <input type="time" id="d-hdeb" value="13:30">
+            </div>
+            <div>
+              <label>Heure de fin</label>
+              <input type="time" id="d-hfin" value="15:30">
+            </div>
+          </div>
+          <label>Activité EPS</label>
+          <input type="text" id="d-activite" value="Tennis de table">
+        </div>
+        <div class="card">
+          <div class="card-title">Paragraphes fixes</div>
+          <label>Informations aux élèves</label>
+          <textarea id="d-infos" rows="4">Les élèves devront se présenter avec une tenue de sport adaptée aux activités évaluées, leur convocation et une pièce d'identité.
+Toute absence devra être justifiée auprès de l'établissement et une épreuve de rattrapage sera proposée.</textarea>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="goStep(1)">← Retour</button>
+        <button class="btn primary" onclick="saveParams();goStep(3)">Continuer →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3 : LOGOS -->
+    <div id="step-3" class="hidden">
+      <div class="section-title">Logos</div>
+      <div class="section-sub">Ajoutez un ou deux logos — ils apparaîtront sur toutes les convocations</div>
+
+      <div class="card">
+        <div class="card-title">Logo gauche (établissement / Education Nationale)</div>
+        <div class="logo-upload">
+          <div class="logo-preview" id="logo1-preview">
+            <div class="lp-empty">Aucun<br>logo</div>
+          </div>
+          <div class="logo-upload-btns">
+            <button class="btn sm" onclick="document.getElementById('logo1-in').click()">📂 Choisir une image</button>
+            <button class="btn sm danger" onclick="clearLogo(1)">✕ Supprimer</button>
+            <input type="file" id="logo1-in" accept="image/*" style="display:none" onchange="loadLogo(1,this)">
+          </div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.5">PNG, JPG, SVG<br>Fond transparent<br>recommandé</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Logo droit (AS, club, UNSS…)</div>
+        <div class="logo-upload">
+          <div class="logo-preview" id="logo2-preview">
+            <div class="lp-empty">Aucun<br>logo</div>
+          </div>
+          <div class="logo-upload-btns">
+            <button class="btn sm" onclick="document.getElementById('logo2-in').click()">📂 Choisir une image</button>
+            <button class="btn sm danger" onclick="clearLogo(2)">✕ Supprimer</button>
+            <input type="file" id="logo2-in" accept="image/*" style="display:none" onchange="loadLogo(2,this)">
+          </div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.5">PNG, JPG, SVG<br>Fond transparent<br>recommandé</div>
+        </div>
+      </div>
+
+      <div class="info blue" style="margin-top:0.5rem">
+        <span>ℹ️</span>
+        <span>Les logos sont stockés localement sur votre appareil. Ils seront chargés automatiquement à chaque ouverture de l'application.</span>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Aperçu de la convocation</div>
+        <div style="transform:scale(0.75);transform-origin:top left;width:133%;margin-bottom:-25%">
+          <div id="apercu-zone"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="goStep(2)">← Retour</button>
+        <button class="btn primary" onclick="goStep(4)">Continuer →</button>
+      </div>
+    </div>
+
+    <!-- STEP 4 : GÉNÉRER -->
+    <div id="step-4" class="hidden">
+      <div class="section-title">Générer et imprimer</div>
+      <div class="section-sub" id="gen-sub">Vérifiez les options puis lancez l'impression</div>
+
+      <div class="card">
+        <div class="card-title">Options d'impression</div>
+        <div class="opt-row">
+          <input type="checkbox" id="opt-tri" checked>
+          <label for="opt-tri">Trier par classe puis par nom</label>
+        </div>
+        <div class="opt-row" id="opt-a5-row">
+          <input type="checkbox" id="opt-a5" checked>
+          <label for="opt-a5">2 convocations par page (format A5 — économise le papier)</label>
+        </div>
+        <div class="opt-row">
+          <input type="checkbox" id="opt-apercu-full">
+          <label for="opt-apercu-full">Prévisualiser avant d'imprimer</label>
+        </div>
+      </div>
+
+      <div class="card" id="summary-card">
+        <div class="card-title">Résumé</div>
+        <div id="summary-content" style="font-size:13px;line-height:2;color:var(--text2)"></div>
+      </div>
+
+      <div id="gen-info" class="info amber hidden">
+        <span>⚠️</span><span>Aucune donnée chargée. Revenez à l'étape 1.</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="goStep(3)">← Retour</button>
+        <button class="btn primary" onclick="generer()" id="gen-btn">🖨️ Imprimer les convocations</button>
+      </div>
+
+      <div id="gen-result" class="hidden" style="margin-top:1rem">
+        <div class="info green">
+          <span>✅</span>
+          <span id="gen-result-text"></span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .main -->
+</div><!-- .app -->
+
+<script>
+// ===== STATE =====
+let data = [], cols = [], map = {nom:'',prenom:'',classe:''};
+let type = 'unss';
+let logos = {1: null, 2: null};
+let currentStep = 1;
+let saveTimer = null;
+
+// ===== INIT =====
+window.addEventListener('load', () => {
+  loadFromStorage();
+  buildMobileTabs();
+  updateSummary();
+  apercu();
+});
+
+function buildMobileTabs(){
+  const c = document.getElementById('mobile-tabs');
+  ['Données','Modèle','Logos','Générer'].forEach((n,i)=>{
+    const b=document.createElement('button');
+    b.className='mob-tab'+(i===0?' active':'');
+    b.textContent=n;
+    b.onclick=()=>goStep(i+1);
+    c.appendChild(b);
+  });
+}
+
+// ===== NAVIGATION =====
+function goStep(n){
+  currentStep = n;
+  [1,2,3,4].forEach(i=>{
+    document.getElementById('step-'+i).classList.toggle('hidden', i!==n);
+    const sb = document.getElementById('sb-'+i);
+    sb.classList.toggle('active', i===n);
+  });
+  document.querySelectorAll('.mob-tab').forEach((b,i)=>{
+    b.classList.toggle('active', i+1===n);
+  });
+  if(n===3) apercu();
+  if(n===4) updateSummary();
+}
+
+// ===== TYPE SELECTION =====
+function selectType(t){
+  type = t;
+  document.getElementById('tc-unss').classList.toggle('sel', t==='unss');
+  document.getElementById('tc-dnb').classList.toggle('sel', t==='dnb');
+  document.getElementById('form-unss').classList.toggle('hidden', t!=='unss');
+  document.getElementById('form-dnb').classList.toggle('hidden', t!=='dnb');
+  document.getElementById('opt-a5-row').classList.toggle('hidden', t!=='unss');
+  scheduleSave();
+  apercu();
+}
+
+// ===== FILE IMPORT =====
+function dzOver(e){e.preventDefault();document.getElementById('dropzone').classList.add('drag')}
+function dzLeave(e){document.getElementById('dropzone').classList.remove('drag')}
+function dzDrop(e){e.preventDefault();document.getElementById('dropzone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processFile(f)}
+function loadFile(i){if(i.files[0])processFile(i.files[0])}
+
+function processFile(file){
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    const r = new FileReader();
+    r.onload = e => {
+      const p = Papa.parse(e.target.result, {header:true, skipEmptyLines:true});
+      data = p.data; cols = p.meta.fields||[];
+      showImport(file.name);
+    };
+    r.readAsText(file,'UTF-8');
+  } else {
+    const r = new FileReader();
+    r.onload = e => {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      data = XLSX.utils.sheet_to_json(ws, {defval:''});
+      if(data.length){ cols = Object.keys(data[0]); showImport(file.name); }
+    };
+    r.readAsArrayBuffer(file);
+  }
+}
+
+function showImport(fname){
+  document.getElementById('import-res').classList.remove('hidden');
+  const badges = document.getElementById('import-badges');
+  badges.innerHTML = `
+    <span class="badge green">✓ ${data.length} élève${data.length>1?'s':''}</span>
+    <span class="badge blue">${cols.length} colonnes</span>
+    <span class="badge amber">📄 ${fname}</span>
+  `;
+  // preview table
+  const wrap = document.getElementById('tbl-wrap');
+  const preview = data.slice(0,5);
+  wrap.innerHTML = '<table><thead><tr>'+cols.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead>'
+    +'<tbody>'+preview.map(r=>'<tr>'+cols.map(c=>'<td>'+(r[c]||'')+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+  // mapping
+  const g = document.getElementById('map-grid');
+  g.innerHTML = '';
+  const fields = [{k:'nom',l:'Nom'},{k:'prenom',l:'Prénom'},{k:'classe',l:'Classe'}];
+  fields.forEach(f=>{
+    const auto = cols.find(c => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(f.k)) || '';
+    map[f.k] = auto;
+    g.innerHTML += `<div class="map-row">
+      <span class="map-label">${f.l}</span>
+      <span class="map-arrow">→</span>
+      <select class="sm-sel" onchange="map['${f.k}']=this.value;apercu()">
+        <option value="">(ignorer)</option>
+        ${cols.map(c=>'<option value="'+c+'"'+(c===auto?' selected':'')+'>'+c+'</option>').join('')}
+      </select>
+    </div>`;
+  });
+  updateSummary();
+}
+
+// ===== LOGOS =====
+function loadLogo(n, input){
+  const file = input.files[0];
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    logos[n] = e.target.result;
+    updateLogoPreview(n);
+    saveLogos();
+    apercu();
+  };
+  r.readAsDataURL(file);
+}
+
+function clearLogo(n){
+  logos[n] = null;
+  updateLogoPreview(n);
+  saveLogos();
+  apercu();
+}
+
+function updateLogoPreview(n){
+  const el = document.getElementById('logo'+n+'-preview');
+  if(logos[n]){
+    el.innerHTML = '<img src="'+logos[n]+'" alt="logo">';
+  } else {
+    el.innerHTML = '<div class="lp-empty">Aucun<br>logo</div>';
+  }
+}
+
+// ===== APERÇU =====
+function fmtDate(d){
+  if(!d) return '___';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+function fmtTime(t){ return t ? t.replace(':','h') : '___'; }
+
+function getVars(row){
+  return {
+    NOM: (map.nom && row && row[map.nom]) || 'NOM',
+    PRENOM: (map.prenom && row && row[map.prenom]) || 'PRENOM',
+    CLASSE: (map.classe && row && row[map.classe]) || 'Classe',
+  };
+}
+
+function logoTag(n, size){
+  if(!logos[n]) return '';
+  return `<img src="${logos[n]}" style="height:${size}px;max-width:${size*1.5}px;object-fit:contain" alt="logo">`;
+}
+
+function buildUNSS(v){
+  const sport = document.getElementById('u-sport').value||'VTT';
+  const compet = document.getElementById('u-compet').value||'championnat UNSS';
+  const etab = document.getElementById('u-etab').value||'';
+  const date = fmtDate(document.getElementById('u-date').value);
+  const lieu = document.getElementById('u-lieu').value||'Lieu à définir';
+  const hdep = fmtTime(document.getElementById('u-hdep').value);
+  const hret = fmtTime(document.getElementById('u-hret').value);
+  const ldep = document.getElementById('u-ldep').value;
+  const lret = document.getElementById('u-lret').value;
+  const infos = document.getElementById('u-infos').value;
+
+  const hasL1 = !!logos[1], hasL2 = !!logos[2];
+  const headerLogos = (hasL1||hasL2) ? `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+      <div>${hasL1 ? logoTag(1,55) : ''}</div>
+      <div style="text-align:center;font-size:11px;color:#555">${etab}</div>
+      <div>${hasL2 ? logoTag(2,55) : ''}</div>
+    </div>` : `<div style="font-size:11px;color:#555;margin-bottom:0.8rem;text-align:right">${etab}</div>`;
+
+  return `<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.7;padding:1.5cm">
+    ${headerLogos}
+    <h1 style="font-size:22px;font-weight:400;text-align:center;margin-bottom:1.2rem">Convocation UNSS ${sport}</h1>
+    <p>Votre enfant <strong>${v.NOM} ${v.PRENOM} ${v.CLASSE}</strong> est convoqué(e) ce <strong>${date}</strong><br>
+    pour ${compet} au <strong>${lieu}</strong>.</p>
+    <p style="margin-top:1rem">Départ : ${hdep} ${ldep}<br>Retour : Vers ${hret} ${lret}</p>
+    <p style="margin-top:1rem;white-space:pre-line">${infos}</p>
+    <hr style="margin:1.2rem 0;border:none;border-top:1px solid #000">
+    <p>Je soussigné(e) _________________________ responsable légal de <strong><u>${v.NOM} ${v.PRENOM}</u></strong> autorise mon fils / ma fille à participer à cette compétition.</p>
+    <p style="margin-top:0.8rem">Au retour au collège je l'autorise à repartir par ses propres moyens : <strong>Oui &nbsp;/&nbsp; Non</strong></p>
+    <p style="margin-top:1rem;font-size:11px;color:#555">Date et signature :</p>
+  </div>`;
+}
+
+function buildDNB(v){
+  const college = document.getElementById('d-college').value||'Collège';
+  const date = fmtDate(document.getElementById('d-date').value);
+  const hdeb = fmtTime(document.getElementById('d-hdeb').value);
+  const hfin = fmtTime(document.getElementById('d-hfin').value);
+  const activite = document.getElementById('d-activite').value||'';
+  const infos = document.getElementById('d-infos').value;
+
+  const hasL1 = !!logos[1], hasL2 = !!logos[2];
+  const logoLeft = hasL1 ? logoTag(1,55) : '<div style="width:55px"></div>';
+  const logoRight = hasL2 ? logoTag(2,55) : '<div style="width:55px"></div>';
+
+  return `<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.7;padding:1.5cm">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+      ${logoLeft}
+      <div style="text-align:center;font-size:12px;color:#555">${college}</div>
+      ${logoRight}
+    </div>
+    <h2 style="font-size:15px;font-weight:bold;text-decoration:underline;margin:0.8rem 0 1rem">CONVOCATION DNB EPS :</h2>
+    <p style="text-indent:2em">Dans le cadre de l'évaluation du contrôle continu du Diplôme National du Brevet, votre enfant <strong>${v.NOM} ${v.PRENOM} ${v.CLASSE}</strong> est convoqué(e) à l'épreuve d'Éducation Physique et Sportive (EPS)</p>
+    <p style="margin-top:0.8rem"><strong><u>Date :</u></strong> ${date}</p>
+    <p style="margin-top:0.5rem"><strong><u>Horaire :</u></strong> ${hdeb}–${hfin}</p>
+    <p style="margin-top:0.5rem"><strong><u>Activité :</u></strong> ${activite}</p>
+    <p style="margin-top:0.8rem;text-indent:2em;white-space:pre-line">${infos}</p>
+  </div>`;
+}
+
+function apercu(){
+  const el = document.getElementById('apercu-zone');
+  if(!el) return;
+  const sample = data.length > 0 ? data[0] : null;
+  const v = getVars(sample);
+  el.innerHTML = type==='unss' ? buildUNSS(v) : buildDNB(v);
+}
+
+// ===== SUMMARY =====
+function updateSummary(){
+  const el = document.getElementById('summary-content');
+  if(!el) return;
+  const gi = document.getElementById('gen-info');
+  const gb = document.getElementById('gen-btn');
+  if(data.length===0){
+    gi.classList.remove('hidden');
+    gb.disabled = true;
+    el.innerHTML = '<span style="color:var(--red)">Aucune donnée chargée</span>';
+    return;
+  }
+  gi.classList.add('hidden');
+  gb.disabled = false;
+  const sub = document.getElementById('gen-sub');
+  sub.textContent = data.length+' élève'+(data.length>1?'s':'')+' prêt'+(data.length>1?'s':'')+' à imprimer';
+  el.innerHTML = `
+    <div><span style="color:var(--text3)">Élèves :</span> <strong>${data.length}</strong></div>
+    <div><span style="color:var(--text3)">Type :</span> <strong>${type==='unss'?'UNSS / Compétition':'DNB EPS / Examen'}</strong></div>
+    <div><span style="color:var(--text3)">Logo gauche :</span> <strong>${logos[1]?'✓ Défini':'—'}</strong></div>
+    <div><span style="color:var(--text3)">Logo droit :</span> <strong>${logos[2]?'✓ Défini':'—'}</strong></div>
+  `;
+}
+
+// ===== GÉNÉRER =====
+function generer(){
+  if(data.length===0){ goStep(1); return; }
+  let rows = [...data];
+  if(document.getElementById('opt-tri').checked){
+    rows.sort((a,b)=>{
+      const ca=(map.classe&&a[map.classe])||'';
+      const cb=(map.classe&&b[map.classe])||'';
+      if(ca!==cb) return ca.localeCompare(cb,'fr');
+      return ((map.nom&&a[map.nom])||'').localeCompare((map.nom&&b[map.nom])||'','fr');
+    });
+  }
+  const a5 = type==='unss' && document.getElementById('opt-a5').checked;
+  let html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#fff}
+    ${a5 ? `
+    .page{width:50%;display:inline-block;vertical-align:top;min-height:14.8cm;border-right:1px dashed #bbb}
+    .page:nth-child(2n){border-right:none}
+    .cf{clear:both;display:block}
+    @media print{
+      @page{size:A4 landscape;margin:0}
+      body{width:29.7cm}
+      .page{width:50%;min-height:14.8cm}
+    }
+    ` : `
+    .page{display:block;min-height:27cm;page-break-after:always}
+    @media print{
+      @page{size:A4 portrait;margin:0}
+      .page{page-break-after:always;min-height:27cm}
+    }
+    `}
+  </style></head><body>`;
+
+  rows.forEach((row, i) => {
+    const v = getVars(row);
+    const content = type==='unss' ? buildUNSS(v) : buildDNB(v);
+    html += '<div class="page">'+content+'</div>';
+    if(a5 && i%2===1) html += '<div class="cf"></div>';
+  });
+  html += '</body></html>';
+
+  if(document.getElementById('opt-apercu-full').checked){
+    const w = window.open('','_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>w.print(), 800);
+  } else {
+    const w = window.open('','_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>w.print(), 800);
+  }
+
+  const res = document.getElementById('gen-result');
+  res.classList.remove('hidden');
+  document.getElementById('gen-result-text').textContent =
+    rows.length+' convocation'+(rows.length>1?'s':'')+' générée'+(rows.length>1?'s':'')+
+    (a5?' – '+ Math.ceil(rows.length/2)+' page'+(Math.ceil(rows.length/2)>1?'s':''):'') + '.';
+}
+
+// ===== PERSISTANCE LOCALSTORAGE =====
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  document.getElementById('save-dot').style.display='inline-block';
+  document.getElementById('save-label').textContent='Sauvegarde en cours…';
+  saveTimer = setTimeout(()=>{
+    saveParams();
+    document.getElementById('save-dot').style.display='none';
+    document.getElementById('save-label').textContent='Paramètres sauvegardés';
+  }, 1200);
+}
+
+function saveParams(){
+  const fields = ['u-etab','u-sport','u-compet','u-date','u-lieu','u-hdep','u-ldep','u-hret','u-lret','u-infos',
+    'd-college','d-date','d-hdeb','d-hfin','d-activite','d-infos'];
+  const saved = {};
+  fields.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) saved[id]=el.value;
+  });
+  saved['type'] = type;
+  localStorage.setItem('convoc_params', JSON.stringify(saved));
+}
+
+function saveLogos(){
+  try {
+    if(logos[1]) localStorage.setItem('convoc_logo1', logos[1]);
+    else localStorage.removeItem('convoc_logo1');
+    if(logos[2]) localStorage.setItem('convoc_logo2', logos[2]);
+    else localStorage.removeItem('convoc_logo2');
+  } catch(e){ console.warn('Logo trop lourd pour localStorage'); }
+}
+
+function loadFromStorage(){
+  const raw = localStorage.getItem('convoc_params');
+  if(raw){
+    try {
+      const saved = JSON.parse(raw);
+      Object.keys(saved).forEach(id=>{
+        if(id==='type'){ selectType(saved[id]); return; }
+        const el=document.getElementById(id);
+        if(el) el.value=saved[id];
+      });
+    } catch(e){}
+  }
+  const l1 = localStorage.getItem('convoc_logo1');
+  const l2 = localStorage.getItem('convoc_logo2');
+  if(l1){ logos[1]=l1; updateLogoPreview(1); }
+  if(l2){ logos[2]=l2; updateLogoPreview(2); }
+
+  // auto-save on any input change
+  document.querySelectorAll('#step-2 input, #step-2 textarea').forEach(el=>{
+    el.addEventListener('input', ()=>{ scheduleSave(); apercu(); });
+  });
+}
+
+// ===== SERVICE WORKER =====
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
